@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getChapterFromDb, getStudentFromDb } from '@/lib/serverDb'
+import { getChapterFromDb, getStudentFromDb, saveChapter } from '@/lib/serverDb'
 import { generateChapterWithAI } from '@/lib/aiFallback'
 
 export async function POST(request: NextRequest) {
