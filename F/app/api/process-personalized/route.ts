@@ -11,7 +11,34 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Chapter ID is required' }, { status: 400 })
         }
 
-        const baseChapter = getChapterFromDb(chapterId)
+        let resolvedChapterId = chapterId
+        if (resolvedChapterId && resolvedChapterId.length === 6) {
+            const localMatch = getChapterFromDb(resolvedChapterId)
+            if (localMatch) {
+                resolvedChapterId = localMatch.chapter_id
+            } else {
+                try {
+                    console.log(`Resolving share code ${resolvedChapterId} in process-personalized route...`)
+                    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+                    const shareRes = await fetch(`${BACKEND_URL}/share/${resolvedChapterId}`, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        signal: AbortSignal.timeout(5000)
+                    })
+                    if (shareRes.ok) {
+                        const sharedChapter = await shareRes.json()
+                        if (sharedChapter && sharedChapter.chapter_id) {
+                            saveChapter(sharedChapter)
+                            resolvedChapterId = sharedChapter.chapter_id
+                        }
+                    }
+                } catch (shareErr) {
+                    console.warn(`Failed to resolve share code in personalization route:`, shareErr)
+                }
+            }
+        }
+
+        const baseChapter = getChapterFromDb(resolvedChapterId)
         if (!baseChapter) {
             return NextResponse.json({ error: 'Chapter not found' }, { status: 404 })
         }

@@ -97,7 +97,29 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const chapterId = params.id
+        let chapterId = params.id
+
+        // If the ID is a 6-character share code, try resolving it from the backend share endpoint first
+        if (chapterId && chapterId.length === 6) {
+            try {
+                console.log(`Attempting to resolve 6-digit share code: ${chapterId} from backend...`)
+                const shareRes = await fetch(`${BACKEND_URL}/share/${chapterId}`, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(5000)
+                })
+                if (shareRes.ok) {
+                    const sharedChapter = await shareRes.json()
+                    if (sharedChapter && sharedChapter.chapter_id) {
+                        console.log(`Successfully resolved share code ${chapterId} to full UUID: ${sharedChapter.chapter_id}`)
+                        saveChapter(sharedChapter)
+                        chapterId = sharedChapter.chapter_id
+                    }
+                }
+            } catch (shareErr) {
+                console.warn(`Failed to resolve share code via backend lookup:`, shareErr)
+            }
+        }
         
         // 1. First, check if chapter already exists in our local server database
         const localChapter = getChapterFromDb(chapterId)

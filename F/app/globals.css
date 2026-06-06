@@ -3,7 +3,7 @@
 
 @font-face {
     font-family: 'OpenDyslexic';
-    src: url('/fonts/OpenDyslexic.woff2') format('woff2');
+    src: url('https://cdn.jsdelivr.net/npm/@fontsource/opendyslexic/files/opendyslexic-latin-400-normal.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
     font-display: swap;

@@ -72,7 +72,17 @@ export function saveChapter(chapter: ChapterData) {
 
 export function getChapterFromDb(chapterId: string): ChapterData | null {
     const db = initDb()
-    return db.chapters[chapterId] || null
+    if (db.chapters[chapterId]) {
+        return db.chapters[chapterId]
+    }
+    // Prefix lookup for 6-character classroom codes
+    if (chapterId && chapterId.length === 6) {
+        const matchingKey = Object.keys(db.chapters).find(key => key.startsWith(chapterId))
+        if (matchingKey) {
+            return db.chapters[matchingKey]
+        }
+    }
+    return null
 }
 
 export function getAllChapters(): ChapterData[] {

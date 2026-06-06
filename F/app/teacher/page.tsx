@@ -9,7 +9,6 @@ import { RecommendationCard } from '@/components/ai/RecommendationPanel'
 import { uploadAndProcess, listChapters, getProcessingStatus } from '@/lib/api'
 import { UploadMetadata, ChapterData, ProcessingStatus as Status } from '@/lib/types'
 import { Toast } from '@/components/shared/Toast'
-import { ARPdfViewer } from '@/components/shared/ARPdfViewer'
 
 
 export default function TeacherPage() {
@@ -29,7 +28,6 @@ export default function TeacherPage() {
         chunk_total: 0,
     })
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
-    const [arViewerOpen, setArViewerOpen] = useState(false)
     const [backendConnected, setBackendConnected] = useState<'checking' | 'connected' | 'disconnected'>('checking')
 
     // Check backend connection health status
@@ -189,73 +187,6 @@ export default function TeacherPage() {
 
             <main className="max-w-7xl mx-auto px-6 py-12">
 
-                {/* ─── AR PDF Viewer Feature Card ─── */}
-                <div
-                    className="mb-10 rounded-3xl overflow-hidden relative"
-                    style={{
-                        background: 'linear-gradient(135deg, #1a0533 0%, #0d1233 50%, #001233 100%)',
-                        border: '1px solid rgba(139,92,246,0.25)',
-                        boxShadow: '0 0 40px rgba(139,92,246,0.1)',
-                    }}
-                >
-                    {/* Glow orbs */}
-                    <div className="absolute -top-12 -left-12 w-48 h-48 rounded-full" style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)' }} />
-                    <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full" style={{ background: 'radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%)' }} />
-
-                    <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                        {/* Icon */}
-                        <div
-                            className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-                            style={{
-                                background: 'rgba(139,92,246,0.15)',
-                                border: '1px solid rgba(139,92,246,0.35)',
-                                boxShadow: '0 0 20px rgba(139,92,246,0.2)',
-                            }}
-                        >
-                            🔮
-                        </div>
-
-                        {/* Text */}
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span
-                                    className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                                    style={{ background: 'rgba(139,92,246,0.2)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}
-                                >
-                                    NEW
-                                </span>
-                                <h2 className="text-white font-extrabold text-lg">AR PDF Text Overlay</h2>
-                            </div>
-                            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                                Upload any PDF, activate your camera, and project the extracted text as augmented reality floating overlays on the live feed — perfect for classroom demonstrations.
-                            </p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {['📄 PDF Text Extraction', '📷 Live Camera Feed', '🧠 OpenCV Processing', '✨ AR Text Overlays', '🎨 Interactive Highlights'].map(tag => (
-                                    <span
-                                        key={tag}
-                                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                                        style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}
-                                    >
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Launch Button */}
-                        <button
-                            onClick={() => setArViewerOpen(true)}
-                            className="flex-shrink-0 px-6 py-3.5 rounded-2xl font-bold text-white text-sm transition-all hover:scale-105"
-                            style={{
-                                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                                boxShadow: '0 0 25px rgba(124,58,237,0.4)',
-                            }}
-                        >
-                            🚀 Launch AR Viewer
-                        </button>
-                    </div>
-                </div>
-
                 {/* Upload Section */}
                 {!processing && (
                     <div className="mb-12">
@@ -342,12 +273,6 @@ export default function TeacherPage() {
                 />
             )}
 
-            {/* AR PDF Viewer Modal */}
-            <ARPdfViewer
-                isOpen={arViewerOpen}
-                onClose={() => setArViewerOpen(false)}
-                mode="teacher"
-            />
         </div>
     )
 }
