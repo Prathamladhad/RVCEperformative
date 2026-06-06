@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/fonts/OpenDyslexic.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font-primary: 'OpenDyslexic', 'Lexend', system-ui, -apple-system, sans-serif;
+    --font-size: 18px;
+    --line-height: 1.5;
+    
+    /* Low-Contrast Warm Colors */
+    --bg-page: #FFFFE5; /* Soft Cream */
+    --bg-container: #FEFAF0; /* Off-White */
+    --color-text: #1A1A1A; /* Soft Black */
+    --border-color: #DCD7BA; /* Warm Muted Grey-Beige */
+
+    /* Okabe-Ito Colorblind-Safe Parameters */
+    --color-blue: #0072B2;
+    --color-orange: #E69F00;
+    --color-teal: #009E73;
+    --color-purple: #CC79A7;
+    --color-sky: #56B4E9;
+    --color-vermillion: #D55E00;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply antialiased;
+        font-family: var(--font-primary) !important;
+        font-size: 18px !important;
+        line-height: 1.5 !important;
+        background-color: var(--bg-page) !important;
+        color: var(--color-text) !important;
+        text-align: left !important;
+    }
+
+    /* Force all text nodes to use primary accessible fonts and left alignment */
+    h1, h2, h3, h4, h5, h6, p, span, a, button, select, input, textarea, label, li, td, th, div {
+        font-family: var(--font-primary) !important;
+        line-height: 1.5 !important;
+        text-align: left !important;
+    }
+
+    /* Base Font Sizes matching requirements */
+    p, span, a, button, select, input, textarea, label, li {
+        font-size: 18px !important;
+    }
+
+    /* Minimum Font Size of 16px for secondary labels, selects, options */
+    .text-xs, .text-sm, .text-caption, select, input, option, time, .text-slate-400, .text-slate-500 {
+        font-size: 16px !important;
+    }
+
+    /* Enforce low glare page backgrounds globally */
+    main, body, html {
+        background: var(--bg-page) !important;
+        background-color: var(--bg-page) !important;
+    }
+
+    /* Enforce Off-White container/card backgrounds with Muted Grey-Beige borders */
+    .bg-white, .bg-white\/70, .bg-white\/80, .bg-white\/90, .bg-white\/95, 
+    header, footer, card, aside, section, article, [class*="bg-white"],
+    .border-white\/60, .border-white\/80, .border-slate-200\/80, .border-slate-800 {
+        background-color: var(--bg-container) !important;
+        background: var(--bg-container) !important;
+        color: var(--color-text) !important;
+        border: 1.5px solid var(--border-color) !important;
+        box-shadow: 0 4px 12px rgba(26, 26, 26, 0.03) !important;
+        border-radius: 24px !important;
+    }
+
+    /* Accent color mappings: Safe Teal / Safe Sky Blue (subtle backdrops) */
+    .bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-slate-200\/60, 
+    .bg-violet-50, .bg-violet-50\/60, .bg-violet-100, .bg-violet-500\/10,
+    .bg-emerald-50, .bg-emerald-100, .bg-blue-50, .bg-emerald-500\/10,
+    [class*="bg-violet-600/10"], [class*="bg-slate-50"], [class*="bg-slate-800"] {
+        background-color: var(--bg-container) !important;
+        background: var(--bg-container) !important;
+        color: var(--color-text) !important;
+        border-color: var(--border-color) !important;
+    }
+
+    /* Predictable interactive elements focus & hover states using high-visibility Safe Orange */
+    button, a, select, input, textarea {
+        transition: all 0.2s ease-in-out !important;
+        outline: none !important;
+    }
+    button:hover, a:hover, select:hover, input:hover {
+        background-color: var(--color-sky) !important; /* Safe Sky Blue hover feedback */
+        color: #1A1A1A !important;
+        border-color: var(--color-blue) !important;
+    }
+    /* Active focus rings mapping to Safe Orange #E69F00 */
+    button:focus, a:focus, select:focus, input:focus, textarea:focus,
+    button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+        outline: 3px solid var(--color-orange) !important;
+        outline-offset: 2px !important;
+        box-shadow: 0 0 0 4px rgba(230, 159, 0, 0.2) !important;
+    }
+
+    /* Colorblind-safe Charts & Priority Variables mappings */
+    .bg-brand-purple, .bg-brand-purple\/60, .bg-violet-600, .bg-violet-500, .bg-indigo-600 {
+        background-color: var(--color-blue) !important; /* Safe Blue */
+        background: var(--color-blue) !important;
+        color: #FFFFFF !important;
+    }
+    
+    .bg-accent-teal, .bg-emerald-600, .bg-emerald-500, .bg-green-600, 
+    .bg-amber-500, .bg-yellow-500 {
+        background-color: var(--color-teal) !important; /* Safe Teal */
+        background: var(--color-teal) !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Overwhelm alert & critical cancel states mapping to Safe Vermillion */
+    .bg-rose-500, .bg-rose-600, .bg-red-600 {
+        background-color: var(--color-vermillion) !important;
+        background: var(--color-vermillion) !important;
+        color: #FFFFFF !important;
+    }
+}
+
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .prose-para {
+        @apply text-left max-w-prose;
+    }
+
+    .font-opendyslexic {
+        font-family: 'OpenDyslexic', sans-serif !important;
+    }
+
+    .font-lexend {
+        font-family: 'OpenDyslexic', sans-serif !important;
+    }
+}

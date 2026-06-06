@@ -1,0 +1,31 @@
+{
+    "name": "neuroadapt",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "@types/pdf-parse": "^1.1.5",
+        "jspdf": "^4.2.1",
+        "next": "^14.0.0",
+        "pdf-parse": "^2.4.5",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "xlsx": "^0.18.5"
+    },
+    "devDependencies": {
+        "@types/node": "20.19.41",
+        "@types/react": "18.3.29",
+        "@types/react-dom": "^18.2.0",
+        "autoprefixer": "^10.4.16",
+        "eslint": "^8.50.0",
+        "eslint-config-next": "^14.0.0",
+        "postcss": "^8.4.31",
+        "tailwindcss": "^3.4.0",
+        "typescript": "5.9.3"
+    }
+}
