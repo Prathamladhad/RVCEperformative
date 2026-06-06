@@ -86,6 +86,7 @@ def _simplify_with_ollama(paragraph: str, wpm: Optional[int] = None, profile: Op
     Returns the simplified text, or None if it fails.
     """
     system_prompt = _get_tailored_system_prompt(wpm, profile)
+    print(f"\n[OLLAMA-PROCESS] Attempting call to Ollama ({OLLAMA_MODEL}) at {OLLAMA_BASE_URL}/api/generate...")
     
     try:
         prompt = f"{system_prompt}\n\nText to rewrite:\n{paragraph}\n\nRewritten text:"
@@ -103,16 +104,21 @@ def _simplify_with_ollama(paragraph: str, wpm: Optional[int] = None, profile: Op
             timeout=60
         )
         
+        print(f"[OLLAMA-PROCESS] Ollama response status: {response.status_code}")
+        
         if response.status_code != 200:
+            print(f"[OLLAMA-PROCESS] ERROR: Ollama returned status {response.status_code} - {response.text}")
             logger.warning(f"[AGENT:simplify] Ollama error: {response.status_code}")
             return None
         
         output_text = response.json().get('response', '').strip()
+        print(f"[OLLAMA-PROCESS] Ollama returned output length: {len(output_text)} characters.")
         
         # Validate: non-empty and not too long (< 3x input)
         if output_text and len(output_text) < len(paragraph) * 3:
             return output_text
         
+        print(f"[OLLAMA-PROCESS] WARNING: Validation failed for output. Output length = {len(output_text)}, Input length = {len(paragraph)}")
         logger.warning(
             f"[AGENT:simplify] Ollama output validation failed, retrying with lower temp"
         )
@@ -123,6 +129,7 @@ def _simplify_with_ollama(paragraph: str, wpm: Optional[int] = None, profile: Op
         
         return None
     except Exception as e:
+        print(f"[OLLAMA-PROCESS] EXCEPTION: Failed to call Ollama. Error details: {str(e)}")
         logger.error(f"[AGENT:simplify] Ollama simplification failed: {str(e)}")
         return None
 
@@ -134,13 +141,14 @@ def _simplify_with_gemini(paragraph: str, wpm: Optional[int] = None, profile: Op
     """
     gemini_key = os.getenv('GEMINI_API_KEY', GEMINI_API_KEY)
     if not gemini_key:
+        print("[GEMINI-FALLBACK] Skipping fallback: GEMINI_API_KEY is not set.")
         logger.warning("[AGENT:simplify] GEMINI_API_KEY not set - skipping Gemini fallback")
         return None
         
     system_prompt = _get_tailored_system_prompt(wpm, profile)
+    print(f"\n[GEMINI-FALLBACK] Attempting call to Gemini (gemini-2.0-flash)...")
     
     try:
-        logger.info("[AGENT:simplify] Attempting Gemini fallback for paragraph...")
         url = f"{GEMINI_URL}?key={gemini_key}"
         prompt = f"{system_prompt}\n\nText to rewrite:\n{paragraph}\n\nRewritten text:"
         
@@ -152,20 +160,26 @@ def _simplify_with_gemini(paragraph: str, wpm: Optional[int] = None, profile: Op
             },
             timeout=30
         )
+        print(f"[GEMINI-FALLBACK] Gemini response status: {response.status_code}")
+        
         if response.status_code != 200:
+            print(f"[GEMINI-FALLBACK] ERROR: Gemini returned status {response.status_code} - {response.text}")
             logger.warning(f"[AGENT:simplify] Gemini fallback API error: {response.status_code}")
             return None
             
         data = response.json()
         output_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        print(f"[GEMINI-FALLBACK] Gemini returned output length: {len(output_text)} characters.")
         
         if output_text and len(output_text) < len(paragraph) * 3:
             logger.info("[AGENT:simplify] Gemini fallback successful")
             return output_text
             
+        print(f"[GEMINI-FALLBACK] WARNING: Validation failed for output. Output length = {len(output_text)}, Input length = {len(paragraph)}")
         logger.warning("[AGENT:simplify] Gemini fallback output validation failed")
         return None
     except Exception as e:
+        print(f"[GEMINI-FALLBACK] EXCEPTION: Failed to call Gemini fallback. Error details: {str(e)}")
         logger.error(f"[AGENT:simplify] Gemini fallback call failed: {str(e)}")
         return None
 
@@ -180,18 +194,28 @@ def _simplify_paragraph(paragraph: str, wpm: Optional[int] = None, profile: Opti
     if not paragraph.strip():
         return paragraph, "none"
         
+    print(f"\n[SIMPLIFY-FLOW] Processing paragraph slice: '{paragraph[:60]}...'")
+    
     # 1. Try Ollama if active
     if ollama_active:
+        print("[SIMPLIFY-FLOW] Ollama is active. Dispatching to Ollama...")
         result = _simplify_with_ollama(paragraph, wpm, profile)
         if result:
+            print("[SIMPLIFY-FLOW] Successfully simplified using Ollama.")
             return result, "ollama"
+        print("[SIMPLIFY-FLOW] Ollama simplification failed. Proceeding to Gemini fallback...")
+    else:
+        print("[SIMPLIFY-FLOW] Ollama is inactive. Skipping directly to Gemini...")
             
     # 2. Try Gemini fallback
+    print("[SIMPLIFY-FLOW] Dispatching to Gemini fallback...")
     result = _simplify_with_gemini(paragraph, wpm, profile)
     if result:
+        print("[SIMPLIFY-FLOW] Successfully simplified using Gemini.")
         return result, "gemini"
         
     # 3. Fall back to original text
+    print("[SIMPLIFY-FLOW] Both processors failed. Returning original paragraph text.")
     return paragraph, "fail"
 
 

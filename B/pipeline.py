@@ -80,6 +80,7 @@ async def run_pipeline(
         source,
         source_type
     )
+    await set_job(job_id, state)
     
     # Agent 2: Text Preprocessing
     state = await run_agent(
@@ -87,6 +88,7 @@ async def run_pipeline(
         preprocess_agent.run,
         state
     )
+    await set_job(job_id, state)
     
     # Agent 3: LLM Simplification
     state = await run_agent(
@@ -94,6 +96,7 @@ async def run_pipeline(
         simplify_agent.run,
         state
     )
+    await set_job(job_id, state)
     
     # Agent 4: Dyslexia Transforms
     state = await run_agent(
@@ -101,6 +104,7 @@ async def run_pipeline(
         dyslexia_agent.run,
         state
     )
+    await set_job(job_id, state)
     
     # Agent 5: HTML Output Builder
     state = await run_agent(

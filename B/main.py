@@ -20,12 +20,16 @@ from uuid import uuid4
 from typing import Optional
 
 from dotenv import load_dotenv
-# Load environment variables
-env_path = Path(__file__).parent / ".env.local"
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path)
+# Load environment variables (.env first, then override with .env.local)
+env_default = Path(__file__).parent / ".env"
+if env_default.exists():
+    load_dotenv(dotenv_path=env_default)
 else:
-    load_dotenv()
+    load_dotenv()  # Fallback to default search
+
+env_local = Path(__file__).parent / ".env.local"
+if env_local.exists():
+    load_dotenv(dotenv_path=env_local, override=True)
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,7 +47,7 @@ from models import (
     PDFExportRequest,
 )
 from pipeline import run_pipeline
-from storage import get_job, delete_job, cleanup_expired_jobs
+from storage import get_job, set_job, delete_job, cleanup_expired_jobs
 
 # ============================================================================
 # Logging Setup
@@ -216,6 +220,19 @@ async def upload(
         logger.warning(f"[API:upload] Job {job_id}: no file or text provided")
         raise HTTPException(status_code=400, detail="Provide either 'file' or 'text'")
     
+    # Initialize job state in storage so status polls don't 404
+    import datetime
+    initial_state = PipelineState(
+        job_id=job_id,
+        wpm=wpm,
+        profile=profile,
+        subject=subject or "science",
+        class_level=class_level or 6,
+        board=board or "NCERT",
+        created_at=datetime.datetime.now().isoformat()
+    )
+    await set_job(job_id, initial_state)
+
     # Start pipeline in background
     background_tasks.add_task(
         run_pipeline,

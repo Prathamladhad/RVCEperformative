@@ -522,6 +522,15 @@ def run(state: PipelineState, source: Union[str, bytes], source_type: str) -> Pi
         )
         if state.agent_statuses.get("ocr") != "degraded":
             state.agent_statuses["ocr"] = "ok"
+            
+        # Explicitly print the extracted text to the console/terminal
+        print("\n" + "="*80)
+        print("--- EXTRACTED TEXT FROM PDF (START) ---")
+        print("="*80)
+        print(raw_text)
+        print("="*80)
+        print("--- EXTRACTED TEXT FROM PDF (END) ---")
+        print("="*80 + "\n")
 
     state.raw_text = raw_text
     return state

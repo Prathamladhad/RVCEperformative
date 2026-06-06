@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
             const backendResponse = await fetch(`${BACKEND_URL}/upload?${queryParams.toString()}`, {
                 method: 'POST',
                 body: backendFormData,
-                signal: AbortSignal.timeout(12000)
+                signal: AbortSignal.timeout(45000)
             })
 
             if (backendResponse.ok) {

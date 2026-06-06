@@ -91,7 +91,7 @@ export async function GET(
             const response = await fetch(`${BACKEND_URL}/status/${jobId}`, {
                 method: 'GET',
                 cache: 'no-store',
-                signal: AbortSignal.timeout(6000)
+                signal: AbortSignal.timeout(45000)
             })
 
             if (response.ok) {

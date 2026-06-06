@@ -122,7 +122,7 @@ export async function GET(
             const response = await fetch(`${BACKEND_URL}/result/${chapterId}/structured`, {
                 method: 'GET',
                 cache: 'no-store',
-                signal: AbortSignal.timeout(10000)
+                signal: AbortSignal.timeout(45000)
             })
 
             if (response.ok) {
