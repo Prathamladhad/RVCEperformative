@@ -6,16 +6,22 @@ import { createTTSManager, isTTSSupported } from '@/lib/tts'
 interface TTSControlsProps {
     text: string
     onWordChange?: (index: number) => void
+    onSentenceChange?: (index: number) => void
     onComplete?: () => void
     speed?: number
     autoPlay?: boolean
+    scale?: 'word' | 'line'
+    onScaleChange?: (scale: 'word' | 'line') => void
 }
 
 export function TTSControls({
     text,
     onWordChange,
+    onSentenceChange,
     onComplete,
     speed = 1,
+    scale = 'word',
+    onScaleChange,
 }: TTSControlsProps) {
     const [ttsManager, setTtsManager] = useState<ReturnType<typeof createTTSManager> | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
@@ -23,6 +29,7 @@ export function TTSControls({
     const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0)
     const [currentSpeed, setCurrentSpeed] = useState(speed)
     const [supported, setSupported] = useState(false)
+    const [activeSentenceIdx, setActiveSentenceIdx] = useState(-1)
 
     useEffect(() => {
         const isSupported = isTTSSupported()
@@ -44,6 +51,38 @@ export function TTSControls({
 
     const speeds = [0.5, 0.75, 1, 1.25, 1.5]
 
+    // Cancel speech on text, scale, speed, or voice changes
+    useEffect(() => {
+        if (ttsManager) {
+            ttsManager.cancel()
+            setIsPlaying(false)
+            setActiveSentenceIdx(-1)
+            onWordChange?.(-1)
+            onSentenceChange?.(-1)
+        }
+    }, [text, scale, selectedVoiceIndex, currentSpeed])
+
+    const runSentenceSequence = async (index: number, sentencesList: string[]) => {
+        for (let i = index; i < sentencesList.length; i++) {
+            setActiveSentenceIdx(i)
+            onSentenceChange?.(i)
+            
+            try {
+                await ttsManager!.speak(sentencesList[i], {
+                    rate: currentSpeed,
+                    voice: voices[selectedVoiceIndex]
+                })
+            } catch (err) {
+                console.log('Sentence sequence interrupted:', err)
+                return
+            }
+        }
+        setIsPlaying(false)
+        setActiveSentenceIdx(-1)
+        onSentenceChange?.(-1)
+        onComplete?.()
+    }
+
     const togglePlayPause = async () => {
         if (!ttsManager || !text) return
 
@@ -54,19 +93,27 @@ export function TTSControls({
             ttsManager.resume()
             setIsPlaying(true)
         } else {
-            try {
-                await ttsManager.speak(text, {
-                    rate: currentSpeed,
-                    voice: voices[selectedVoiceIndex],
-                    onBoundary: (idx) => {
-                        onWordChange?.(idx)
-                    },
-                })
-                setIsPlaying(false)
-                onComplete?.()
-            } catch (error) {
-                console.error('TTS error:', error)
-                setIsPlaying(false)
+            setIsPlaying(true)
+            if (scale === 'word') {
+                try {
+                    await ttsManager.speak(text, {
+                        rate: currentSpeed,
+                        voice: voices[selectedVoiceIndex],
+                        onBoundary: (idx) => {
+                            onWordChange?.(idx)
+                        },
+                    })
+                    setIsPlaying(false)
+                    onWordChange?.(-1)
+                    onComplete?.()
+                } catch (error) {
+                    console.error('TTS error:', error)
+                    setIsPlaying(false)
+                }
+            } else {
+                const sentences = text.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [text]
+                const start = activeSentenceIdx >= 0 ? activeSentenceIdx : 0
+                runSentenceSequence(start, sentences)
             }
         }
     }
@@ -87,6 +134,35 @@ export function TTSControls({
                     >
                         {isPlaying ? '⏸' : '▶'}
                     </button>
+
+                    {/* Highlight Scale Control */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-dark-text">Highlight Style:</span>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => onScaleChange?.('word')}
+                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                                    scale === 'word'
+                                        ? 'bg-brand-purple text-white'
+                                        : 'bg-gray-100 text-dark-text hover:bg-gray-200'
+                                }`}
+                                title="Highlight word-by-word"
+                            >
+                                🔠 Word
+                            </button>
+                            <button
+                                onClick={() => onScaleChange?.('line')}
+                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                                    scale === 'line'
+                                        ? 'bg-brand-purple text-white'
+                                        : 'bg-gray-100 text-dark-text hover:bg-gray-200'
+                                }`}
+                                title="Break down and highlight line-by-line"
+                            >
+                                ➖ Line Breakdown
+                            </button>
+                        </div>
+                    </div>
 
                     {/* Speed Control */}
                     <div className="flex items-center gap-2">

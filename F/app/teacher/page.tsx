@@ -75,25 +75,45 @@ export default function TeacherPage() {
     useEffect(() => {
         if (!processing || !currentChapterId) return
 
-        const interval = setInterval(async () => {
+        let active = true
+        let inFlight = false
+
+        const poll = async () => {
+            if (!active) return
+            if (inFlight) return
+
+            inFlight = true
             try {
                 const status = await getProcessingStatus(currentChapterId)
+                if (!active) return
+                
                 setProcessingStatus(status)
 
                 if (status.stage === 'complete') {
                     setProcessing(false)
                     router.push(`/teacher/review/${currentChapterId}`)
                     setToast({ message: 'Chapter processed successfully!', type: 'success' })
+                    return
                 } else if (status.stage === 'error') {
                     setProcessing(false)
                     setToast({ message: `Processing error: ${status.message}`, type: 'error' })
+                    return
                 }
             } catch (error) {
                 console.error('Failed to check status:', error)
+            } finally {
+                inFlight = false
+                if (active && processing) {
+                    setTimeout(poll, 1500) // Poll again after 1.5s
+                }
             }
-        }, 1000)
+        }
 
-        return () => clearInterval(interval)
+        poll()
+
+        return () => {
+            active = false
+        }
     }, [processing, currentChapterId, router])
 
     const handleUpload = async (metadata: UploadMetadata) => {

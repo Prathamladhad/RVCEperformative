@@ -136,8 +136,44 @@ export async function generateChapterWithAI(
     studentMetrics?: StudentMetrics
 ): Promise<ChapterData> {
     const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        throw new Error('AI API key is not configured.')
+    const isKeyConfigured = apiKey && apiKey !== 'undefined' && apiKey !== 'null' && apiKey.trim() !== ''
+    if (!isKeyConfigured) {
+        console.warn(`[aiFallback] GEMINI_API_KEY is not configured or invalid (${apiKey}). Returning dummy fallback chunks.`)
+        const textChunks = splitIntoChunks(inputText, 3000)
+        const chunks: ChunkObject[] = textChunks.map((textChunk, idx) => {
+            const cleanText = textChunk.replace(/\s+/g, ' ')
+            const sentences = cleanText.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [cleanText]
+            const words = cleanText.replace(/[.,!?;:—]/g, '').split(/\s+/).filter(w => w.length > 5)
+            const keyTerms = Array.from(new Set(words)).slice(0, 4)
+            const glossary: Record<string, string> = {}
+            keyTerms.forEach(term => {
+                glossary[term] = `Vocabulary term: "${term}"`
+            })
+            return {
+                chunk_id: `chunk-fallback-${idx}`,
+                original_text: cleanText,
+                simplified_text: cleanText,
+                key_terms: keyTerms,
+                syllable_map: {},
+                phonetic_map: {},
+                core_facts: sentences.slice(0, 3).map(s => s.trim()),
+                objective: sentences[0] || 'Understand this section.',
+                numbers: [],
+                numbers_plain: [],
+                glossary,
+                word_count: cleanText.split(/\s+/).filter(Boolean).length
+            }
+        })
+        return {
+            chapter_id: metadata.id,
+            title: metadata.title,
+            subject: metadata.subject,
+            class_level: metadata.class_level,
+            board: metadata.board,
+            chunks,
+            created_at: new Date().toISOString(),
+            approved: false
+        }
     }
 
     // ── Guard: reject placeholder / filename-only prompts ──────────────

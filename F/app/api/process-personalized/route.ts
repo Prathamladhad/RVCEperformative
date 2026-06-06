@@ -42,17 +42,28 @@ export async function POST(request: NextRequest) {
         // Reconstruct the full text from the chunks to re-simplify personalized for the student
         const fullText = baseChapter.chunks.map(chunk => chunk.original_text || chunk.simplified_text).join('\n\n')
 
-        console.log(`Generating personalized chapter for student ID: ${studentId || 'default'}, Profile: ${studentMetrics.profile}, WPM: ${studentMetrics.readingWpm}`)
+        // If no Gemini API key is configured, return the pre-simplified base chapter directly
+        const apiKey = process.env.GEMINI_API_KEY
+        const isKeyConfigured = apiKey && apiKey !== 'undefined' && apiKey !== 'null' && apiKey.trim() !== ''
+        if (!isKeyConfigured) {
+            console.warn(`[process-personalized] GEMINI_API_KEY is not configured or invalid (${apiKey}). Returning pre-simplified base chapter.`)
+            return NextResponse.json(baseChapter)
+        }
 
-        const personalizedChapter = await generateChapterWithAI(fullText, {
-            title: baseChapter.title,
-            subject: baseChapter.subject,
-            class_level: baseChapter.class_level,
-            board: baseChapter.board,
-            id: baseChapter.chapter_id
-        }, studentMetrics)
+        try {
+            const personalizedChapter = await generateChapterWithAI(fullText, {
+                title: baseChapter.title,
+                subject: baseChapter.subject,
+                class_level: baseChapter.class_level,
+                board: baseChapter.board,
+                id: baseChapter.chapter_id
+            }, studentMetrics)
 
-        return NextResponse.json(personalizedChapter)
+            return NextResponse.json(personalizedChapter)
+        } catch (aiErr) {
+            console.error('[process-personalized] Local AI personalization failed, falling back to pre-simplified base chapter:', aiErr)
+            return NextResponse.json(baseChapter)
+        }
 
     } catch (e) {
         console.error('Error generating personalized chapter:', e)

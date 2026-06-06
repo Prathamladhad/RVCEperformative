@@ -200,7 +200,7 @@ def generate_chapter_pdf(
             story.append(Spacer(1, 0.08*inch))
             
             # Simplified text (dyslexia-friendly version)
-            simplified = chunk.get("simplified_text", "")
+            simplified = chunk.get("simplified_text", chunk.get("simplified", ""))
             if simplified:
                 story.append(Paragraph("<i><b>Simplified Text (Dyslexia-Friendly):</b></i>", objective_style))
                 story.append(Paragraph(simplified, content_style))
@@ -209,7 +209,7 @@ def generate_chapter_pdf(
             
             # Original text (if included)
             if include_original:
-                original = chunk.get("original_text", "")
+                original = chunk.get("original_text", chunk.get("text", ""))
                 if original and original != simplified:
                     story.append(Paragraph("<i><b>Original Text:</b></i>", objective_style))
                     story.append(Paragraph(original, content_style))

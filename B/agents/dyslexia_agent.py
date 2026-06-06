@@ -202,21 +202,43 @@ def _transform_c_concepts(blocks: List[Dict]) -> List[Dict]:
                     'sentences': [text]
                 })
             else:
-                # Split into sentences
+                # Split simplified into sentences
                 sentences = re.split(r'(?<=[.!?])\s+', text)
                 sentences = [s.strip() for s in sentences if s.strip()]
                 
-                # Group sentences into chunks of 2-4
-                for i in range(0, len(sentences), 3):
+                # Split original into sentences
+                orig_text = block.get('text', '')
+                orig_sentences = re.split(r'(?<=[.!?])\s+', orig_text)
+                orig_sentences = [s.strip() for s in orig_sentences if s.strip()]
+                
+                n_simp = len(sentences)
+                n_orig = len(orig_sentences)
+                
+                # Group sentences into chunks of 3
+                for i in range(0, n_simp, 3):
                     chunk_id += 1
                     chunk_sentences = sentences[i:i+3]
+                    
+                    # Calculate corresponding original sentences proportionally
+                    if n_simp > 0 and n_orig > 0:
+                        orig_start = int(i * n_orig / n_simp)
+                        orig_end = int(min(i + 3, n_simp) * n_orig / n_simp)
+                        # Ensure we don't miss the last sentences
+                        if min(i + 3, n_simp) == n_simp:
+                            orig_end = n_orig
+                        chunk_orig_sentences = orig_sentences[orig_start:orig_end]
+                    else:
+                        chunk_orig_sentences = orig_sentences
+                    
+                    chunk_orig_text = ' '.join(chunk_orig_sentences)
                     
                     chunked_blocks.append({
                         **block,
                         'chunk_id': chunk_id,
                         'is_heading': False,
                         'sentences': chunk_sentences,
-                        'simplified': ' '.join(chunk_sentences)
+                        'simplified': ' '.join(chunk_sentences),
+                        'text': chunk_orig_text
                     })
         
         logger.info(f"[AGENT:dyslexia:C] Created {chunk_id} concept chunks")

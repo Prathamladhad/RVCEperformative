@@ -49,6 +49,15 @@ export default function StudentReaderPage({
     const accessibility = useAccessibility()
     const [glossaryOpen, setGlossaryOpen] = useState(false)
     const [arViewerOpen, setArViewerOpen] = useState(false)
+    const [ttsControlsOpen, setTtsControlsOpen] = useState(true)
+    const [ttsScale, setTtsScale] = useState<'word' | 'line'>('word')
+    const [activeSentenceIndex, setActiveSentenceIndex] = useState(-1)
+
+    // Reset active word and sentence indices when chunk index changes
+    useEffect(() => {
+        setActiveSentenceIndex(-1)
+        reading.setActiveWord(-1)
+    }, [reading.currentChunkIndex])
 
     // Test & Metrics States
     const [quizActive, setQuizActive] = useState(false)
@@ -478,6 +487,7 @@ export default function StudentReaderPage({
                                 canNext={reading.currentChunkIndex < chapter.chunks.length - 1}
                                 canPrevious={reading.currentChunkIndex > 0}
                                 activeWordIndex={reading.activeWordIndex}
+                                activeSentenceIndex={activeSentenceIndex}
                                 fontSize={accessibility.prefs.fontSize}
                                 lineHeight={accessibility.prefs.lineHeight}
                                 letterSpacing={accessibility.prefs.letterSpacing}
@@ -577,6 +587,13 @@ export default function StudentReaderPage({
                                 🔮
                             </button>
                             <button
+                                onClick={() => setTtsControlsOpen(!ttsControlsOpen)}
+                                className={`w-14 h-14 rounded-full ${ttsControlsOpen ? 'bg-violet-600' : 'bg-slate-700'} text-white shadow-xl hover:bg-violet-700 transition flex items-center justify-center text-xl hover:scale-110`}
+                                title="Text to Audio Options"
+                            >
+                                🔊
+                            </button>
+                            <button
                                 onClick={() => chapter && exportChunksPDF(chapter, {
                                     includeGlossary: true,
                                     includeCoreFacts: true,
@@ -606,15 +623,31 @@ export default function StudentReaderPage({
                         />
 
                         {/* TTS Play Controls */}
-                        <TTSControls
-                            text={currentChunk.simplified_text}
-                            onWordChange={(idx) => {
-                                reading.setActiveWord(idx)
-                                if (idx >= 0) setTtsActivated(true)
-                            }}
-                            speed={accessibility.prefs.ttsSpeed}
-                            autoPlay={accessibility.prefs.ttsAutoPlay}
-                        />
+                        {ttsControlsOpen && (
+                            <TTSControls
+                                text={currentChunk.simplified_text}
+                                onWordChange={(idx) => {
+                                    reading.setActiveWord(idx)
+                                    if (idx >= 0) setTtsActivated(true)
+                                }}
+                                onSentenceChange={(idx) => {
+                                    setActiveSentenceIndex(idx)
+                                    if (idx >= 0) setTtsActivated(true)
+                                }}
+                                onComplete={() => {
+                                    reading.setActiveWord(-1)
+                                    setActiveSentenceIndex(-1)
+                                }}
+                                speed={accessibility.prefs.ttsSpeed}
+                                autoPlay={accessibility.prefs.ttsAutoPlay}
+                                scale={ttsScale}
+                                onScaleChange={(s) => {
+                                    setTtsScale(s)
+                                    reading.setActiveWord(-1)
+                                    setActiveSentenceIndex(-1)
+                                }}
+                            />
+                        )}
                     </>
                 )}
 

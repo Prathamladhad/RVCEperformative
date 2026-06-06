@@ -91,19 +91,24 @@ export async function GET(
             const response = await fetch(`${BACKEND_URL}/status/${jobId}`, {
                 method: 'GET',
                 cache: 'no-store',
-                signal: AbortSignal.timeout(45000)
+                signal: AbortSignal.timeout(8000)
             })
 
             if (response.ok) {
                 backendData = await response.json()
                 backendOk = true
+                
+                // Reset failure counter on success
+                if ((global as any).backendPollFailures) {
+                    (global as any).backendPollFailures[jobId] = 0
+                }
+                
                 console.log(`Backend status response:`, backendData)
             } else {
-                // Backend returned 404 or other error — don't throw, just fall through
                 console.warn(`Backend status returned ${response.status} for job ${jobId} — using local fallback`)
             }
-        } catch (fetchErr) {
-            console.warn(`Backend unreachable for job ${jobId} status poll — using local fallback`)
+        } catch (fetchErr: any) {
+            console.error(`Backend unreachable/error for job ${jobId} status poll: ${fetchErr?.message || fetchErr}`)
         }
 
         // 3. ── If backend is unreachable or returned 404 ──────────────
@@ -118,9 +123,36 @@ export async function GET(
                 return NextResponse.json(localJob.status)
             }
 
+            // Track consecutive failures using an in-memory counter
+            const maxRetries = 15 // allow ~15 retries before committing to fallback
+            let failures = (global as any).backendPollFailures?.[jobId] || 0
+            failures += 1
+            if (!(global as any).backendPollFailures) {
+                (global as any).backendPollFailures = {}
+            }
+            (global as any).backendPollFailures[jobId] = failures
+
+            console.warn(`[status-poll] Job ${jobId} failed status check (attempt ${failures}/${maxRetries})`)
+
+            if (failures < maxRetries) {
+                // Return last known running status, incrementing progress slightly to keep UI animated
+                const lastStatus = localJob?.status || {
+                    stage: 'simplifying',
+                    progress: 30,
+                    message: 'Processing in progress (waiting for backend)...',
+                    chunk_current: 0,
+                    chunk_total: 0
+                }
+                
+                return NextResponse.json({
+                    ...lastStatus,
+                    message: `Processing in progress... (status poll retry ${failures}/${maxRetries})`
+                })
+            }
+
             // Transition to AI recovery — read the saved PDF from disk
             if (localJob && !localJob.fallback) {
-                console.warn(`Connection to backend lost for Job ${jobId}. Transitioning to AI recovery...`)
+                console.warn(`Connection to backend lost for Job ${jobId} after ${maxRetries} failures. Transitioning to AI recovery...`)
 
                 const recoveryStatus: ProcessingStatus = {
                     stage: 'extracting',

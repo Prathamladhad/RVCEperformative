@@ -10,6 +10,7 @@ interface ChunkRevealProps {
     canNext: boolean
     canPrevious: boolean
     activeWordIndex?: number
+    activeSentenceIndex?: number
     fontSize?: number
     lineHeight?: number
     letterSpacing?: number
@@ -23,6 +24,7 @@ export function ChunkReveal({
     canNext,
     canPrevious,
     activeWordIndex = -1,
+    activeSentenceIndex = -1,
     fontSize = 18,
     lineHeight = 1.8,
     letterSpacing = 0.05,
@@ -49,8 +51,32 @@ export function ChunkReveal({
 
     const renderContent = () => {
         const text = chunk.simplified_text
-        const words = text.split(/\s+/)
 
+        // Sentence-by-sentence (line-by-line) breakdown
+        if (activeSentenceIndex !== undefined && activeSentenceIndex >= 0) {
+            const sentences = text.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [text]
+            return sentences.map((sentence, idx) => {
+                const isActive = idx === activeSentenceIndex
+                return (
+                    <span
+                        key={idx}
+                        className={`transition-colors duration-150 block py-1.5 px-3 rounded-xl border-l-4 ${
+                            isActive 
+                                ? 'bg-yellow-100 border-violet-600 font-semibold shadow-sm text-slate-900' 
+                                : 'border-transparent text-slate-700 hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                        style={{
+                            marginBottom: '0.4em'
+                        }}
+                    >
+                        {sentence.trim()}
+                    </span>
+                )
+            })
+        }
+
+        // Default word-by-word rendering
+        const words = text.split(/\s+/)
         return words.map((word, idx) => {
             const isActive = idx === activeWordIndex
 
