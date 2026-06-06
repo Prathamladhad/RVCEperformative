@@ -21,7 +21,7 @@ const PROFILES: Record<ProfileKey, { title: string; summary: string; presets: Re
     dyslexia: {
         title: 'Dyslexia Mode',
         summary: 'Dyslexic-friendly font, adjustable letter spacing, line focus ruler, and text-to-speech support.',
-        presets: { font: 'opendyslexic', fontSize: 20, lineHeight: 2.0, letterSpacing: 0.08, bg: '#FEF9F0' },
+        presets: { font: 'lexend', fontSize: 20, lineHeight: 2.0, letterSpacing: 0.08, bg: '#FEF9F0' },
     },
     adhd: {
         title: 'ADHD Mode',

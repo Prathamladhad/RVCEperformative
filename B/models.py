@@ -27,6 +27,7 @@ class PipelineState(BaseModel):
     class_level: Optional[int] = 6
     board: Optional[str] = "NCERT"
     created_at: Optional[str] = None
+    quiz_questions: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class UploadRequest(BaseModel):
@@ -123,3 +124,4 @@ class StructuredResultResponse(BaseModel):
     chunks: List[ChunkObjectResponse]
     created_at: str
     approved: bool = False
+    quiz_questions: List[Dict[str, Any]] = Field(default_factory=list)

@@ -6,7 +6,7 @@ import { getStudentPrefs, saveStudentPrefs, resetStudentPrefs } from '@/lib/stor
 
 export function useAccessibility() {
     const [prefs, setPrefs] = useState<StudentPrefs>({
-        font: 'opendyslexic',
+        font: 'lexend',
         fontSize: 18,
         lineHeight: 1.5,
         letterSpacing: 0.05,
@@ -21,7 +21,7 @@ export function useAccessibility() {
     useEffect(() => {
         const loaded = getStudentPrefs()
         // Force specifications
-        loaded.font = 'opendyslexic'
+        loaded.font = loaded.font || 'lexend'
         loaded.fontSize = Math.max(16, loaded.fontSize)
         loaded.lineHeight = 1.5
         setPrefs(loaded)
@@ -33,7 +33,6 @@ export function useAccessibility() {
         <K extends keyof StudentPrefs>(key: K, value: StudentPrefs[K]) => {
             const updated = { ...prefs, [key]: value }
             // Force specs
-            updated.font = 'opendyslexic'
             updated.lineHeight = 1.5
             setPrefs(updated)
             saveStudentPrefs(updated)
@@ -45,7 +44,7 @@ export function useAccessibility() {
     const reset = useCallback(() => {
         resetStudentPrefs()
         const defaults = getStudentPrefs()
-        defaults.font = 'opendyslexic'
+        defaults.font = 'lexend'
         defaults.fontSize = 18
         defaults.lineHeight = 1.5
         defaults.background = 'cream'
@@ -66,13 +65,14 @@ function applyPrefsToDOM(prefs: StudentPrefs): void {
 
     const root = document.documentElement
 
-    // Primary Font: OpenDyslexic (This must be applied globally to all text)
+    // Primary Font mapping: Lexend (clean dyslexia-friendly font) or Inter
     const fontMap = {
-        opendyslexic: "'OpenDyslexic', 'Lexend', system-ui, -apple-system, sans-serif",
-        lexend: "'OpenDyslexic', 'Lexend', system-ui, -apple-system, sans-serif",
-        system: "'OpenDyslexic', 'Lexend', system-ui, -apple-system, sans-serif",
+        opendyslexic: "'Lexend', 'OpenDyslexic', system-ui, -apple-system, sans-serif",
+        lexend: "'Lexend', 'OpenDyslexic', system-ui, -apple-system, sans-serif",
+        system: "'Inter', system-ui, -apple-system, sans-serif",
     }
-    root.style.setProperty('--font-primary', fontMap.opendyslexic)
+    const fontVal = fontMap[prefs.font] || fontMap.lexend
+    root.style.setProperty('--font-primary', fontVal)
 
     // Base Font Size: 18px (Ensures text is large enough)
     const sizeVal = Math.max(16, prefs.fontSize)
@@ -114,7 +114,7 @@ function applyPrefsToDOM(prefs: StudentPrefs): void {
     root.style.setProperty('text-align', 'left')
 
     // Apply to body
-    document.body.style.fontFamily = fontMap.opendyslexic
+    document.body.style.fontFamily = fontVal
     document.body.style.fontSize = `${sizeVal}px`
     document.body.style.lineHeight = '1.5'
     document.body.style.letterSpacing = `${prefs.letterSpacing}em`

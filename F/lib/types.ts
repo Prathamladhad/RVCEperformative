@@ -13,6 +13,13 @@ export interface ChunkObject {
     word_count: number
 }
 
+export interface QuizQuestion {
+    question: string
+    options: string[]
+    correctIndex: number
+    explanation: string
+}
+
 export interface ChapterData {
     chapter_id: string
     title: string
@@ -22,6 +29,7 @@ export interface ChapterData {
     chunks: ChunkObject[]
     created_at: string
     approved: boolean
+    quiz_questions?: QuizQuestion[]
 }
 
 export interface StudentPrefs {

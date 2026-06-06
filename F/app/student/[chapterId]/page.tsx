@@ -104,7 +104,7 @@ export default function StudentReaderPage({
 
             // Map profile -> accessibility preferences
             if (profile === 'dyslexia') {
-                accessibility.updatePref('font', 'opendyslexic')
+                accessibility.updatePref('font', 'lexend')
                 accessibility.updatePref('fontSize', Math.max(18, accessibility.prefs.fontSize + 4))
                 accessibility.updatePref('lineHeight', Math.max(1.8, accessibility.prefs.lineHeight + 0.2))
                 accessibility.updatePref('letterSpacing', Math.max(0.08, accessibility.prefs.letterSpacing + 0.03))

@@ -402,7 +402,8 @@ async def result_structured(job_id: str):
         board=state.board or "NCERT",
         chunks=structured_chunks,
         created_at=created_at_str,
-        approved=False
+        approved=False,
+        quiz_questions=state.quiz_questions
     )
 
 

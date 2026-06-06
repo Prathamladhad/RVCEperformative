@@ -156,6 +156,7 @@ export async function GET(
                     class_level: structuredData.class_level,
                     board: structuredData.board,
                     chunks: structuredData.chunks,
+                    quiz_questions: structuredData.quiz_questions || [],
                     created_at: structuredData.created_at || new Date().toISOString(),
                     approved: structuredData.approved || false
                 }

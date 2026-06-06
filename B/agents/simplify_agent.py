@@ -249,6 +249,221 @@ def _chunk_text(text: str, max_chars: int = 1000) -> list[str]:
     return chunks
 
 
+QUIZ_SYSTEM_PROMPT = """You are an educational AI creating multiple-choice quizzes for school students in India.
+Generate exactly 3 multiple-choice questions based on the textbook content provided.
+Each question must be directly related to the text and have:
+1. "question": A clear, simple question string.
+2. "options": Exactly 4 distinct answer choices as a list of strings.
+3. "correctIndex": An integer (0 to 3) representing the index of the correct answer in the options list.
+4. "explanation": A simple, helpful 1-sentence explanation of why the correct option is right.
+
+You MUST return ONLY a valid JSON array of objects representing the quiz questions, matching the JSON schema below. Do not wrap the JSON in Markdown code blocks, do not include any conversational text or explanation.
+
+JSON Schema:
+[
+  {
+    "question": "string",
+    "options": ["string", "string", "string", "string"],
+    "correctIndex": 0,
+    "explanation": "string"
+  }
+]
+"""
+
+
+def _parse_json_quiz(text: str) -> Optional[list]:
+    """Clean and parse JSON from LLM response."""
+    import json
+    if not text:
+        return None
+    cleaned = text.strip()
+    # Strip markdown block if present
+    if cleaned.startswith("```"):
+        first_bracket = cleaned.find("[")
+        last_bracket = cleaned.rfind("]")
+        if first_bracket != -1 and last_bracket != -1:
+            cleaned = cleaned[first_bracket:last_bracket+1]
+    
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, list) and len(data) > 0:
+            validated = []
+            for item in data:
+                if (
+                    isinstance(item, dict)
+                    and "question" in item
+                    and "options" in item
+                    and isinstance(item["options"], list)
+                    and len(item["options"]) == 4
+                    and "correctIndex" in item
+                    and isinstance(item["correctIndex"], int)
+                    and 0 <= item["correctIndex"] <= 3
+                ):
+                    explanation = item.get("explanation") or f"Correct! The answer is {item['options'][item['correctIndex']]}."
+                    validated.append({
+                        "question": item["question"],
+                        "options": item["options"],
+                        "correctIndex": item["correctIndex"],
+                        "explanation": explanation
+                    })
+            if len(validated) >= 3:
+                return validated[:3]
+            elif len(validated) > 0:
+                return validated
+        return None
+    except Exception as e:
+        logger.warning(f"[AGENT:simplify] Failed to parse quiz JSON: {str(e)}")
+        return None
+
+
+def _generate_quiz_with_ollama(text: str, temperature: float = 0.3) -> Optional[list]:
+    """Generate quiz using local Qwen model in Ollama."""
+    print(f"\n[OLLAMA-QUIZ] Attempting call to Ollama ({OLLAMA_MODEL}) at {OLLAMA_BASE_URL}/api/generate...")
+    try:
+        prompt = f"{QUIZ_SYSTEM_PROMPT}\n\nTextbook Content:\n{text}\n\nQuiz Questions JSON:"
+        
+        response = requests.post(
+            f"{OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "temperature": temperature,
+                "top_p": 0.95,
+            },
+            timeout=90
+        )
+        if response.status_code != 200:
+            logger.warning(f"[AGENT:simplify] Ollama quiz generation error: {response.status_code}")
+            return None
+        
+        output_text = response.json().get('response', '').strip()
+        return _parse_json_quiz(output_text)
+    except Exception as e:
+        logger.error(f"[AGENT:simplify] Ollama quiz generation exception: {str(e)}")
+        return None
+
+
+def _generate_quiz_with_gemini(text: str) -> Optional[list]:
+    """Generate quiz using Gemini API fallback."""
+    gemini_key = os.getenv('GEMINI_API_KEY', GEMINI_API_KEY)
+    if not gemini_key:
+        logger.warning("[AGENT:simplify] GEMINI_API_KEY not set - skipping Gemini quiz fallback")
+        return None
+        
+    print(f"\n[GEMINI-QUIZ] Attempting call to Gemini (gemini-2.0-flash)...")
+    try:
+        url = f"{GEMINI_URL}?key={gemini_key}"
+        prompt = f"{QUIZ_SYSTEM_PROMPT}\n\nTextbook Content:\n{text}\n\nQuiz Questions JSON:"
+        
+        response = requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "responseMimeType": "application/json"
+                }
+            },
+            timeout=30
+        )
+        if response.status_code != 200:
+            logger.warning(f"[AGENT:simplify] Gemini quiz fallback API error: {response.status_code}")
+            return None
+            
+        data = response.json()
+        output_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        return _parse_json_quiz(output_text)
+    except Exception as e:
+        logger.error(f"[AGENT:simplify] Gemini quiz fallback exception: {str(e)}")
+        return None
+
+
+def _generate_local_fallback_quiz(state: PipelineState) -> list:
+    """Generate simple fallback questions from glossary terms and core facts without any LLM call."""
+    import random
+    questions = []
+    glossary_terms = []
+    facts = []
+    
+    for block in state.transformed_chunks:
+        glossary = block.get('glossary', {})
+        if glossary:
+            for term, definition in glossary.items():
+                glossary_terms.append((term, definition))
+        simplified_text = block.get('simplified', '')
+        if simplified_text:
+            sentences = [s.strip() for s in simplified_text.split('.') if s.strip()]
+            facts.extend(sentences)
+            
+    # 1. Term question
+    if glossary_terms:
+        term, definition = glossary_terms[0]
+        distractors = [
+            "An essential term representing physical elements in class standard curriculum.",
+            "The specific process rate used to identify structural chapter items.",
+            "A core properties measurement mapped to adaptive class lessons."
+        ]
+        options = [definition] + distractors
+        random.shuffle(options)
+        correct_index = options.index(definition)
+        questions.append({
+            "question": f"What does the term \"{term}\" mean in this chapter?",
+            "options": options,
+            "correctIndex": correct_index,
+            "explanation": f"Correct! \"{term}\" is defined as: {definition}"
+        })
+        
+    # 2. Fact question
+    if len(facts) > 0:
+        correct_fact = facts[0]
+        distractors = [
+            "It is a chemical sequence that only triggers inside vacuum space chambers.",
+            "It has no dynamic interaction with ecosystem structures or living things.",
+            "It was completely disproven by modern scientific textbook research."
+        ]
+        options = [correct_fact] + distractors
+        random.shuffle(options)
+        correct_index = options.index(correct_fact)
+        questions.append({
+            "question": f"Which of the following is a true statement from this chapter?",
+            "options": options,
+            "correctIndex": correct_index,
+            "explanation": f"Correct! The textbook teaches: {correct_fact}"
+        })
+        
+    # 3. Default fallback
+    while len(questions) < 3:
+        idx = len(questions) + 1
+        general_questions = [
+            {
+                "question": "What is the primary benefit of the line focus ruler in Dyslexia Mode?",
+                "options": [
+                    "It masks out surrounding sentences to prevent letter-crowding eye strain.",
+                    "It reads the entire paragraph in high-speed text narration.",
+                    "It automatically rewrites the chapter in simple phrases.",
+                    "It adds unlockable achievements to your study profile stats."
+                ],
+                "correctIndex": 0,
+                "explanation": "Correct! The line focus ruler helps narrow focus, preventing letters from crowding together while reading."
+            },
+            {
+                "question": "Why does breaking lesson text into small chunks help retain facts?",
+                "options": [
+                    "It prevents cognitive overload and supports active study breaks.",
+                    "It shortens textbook documents to save browser printing size.",
+                    "It hides complex math equations from the dashboard grid.",
+                    "It has no measurable influence on learning rates."
+                ],
+                "correctIndex": 0,
+                "explanation": "Correct! Chunking text lets the brain review, process, and consolidate key details step-by-step."
+            }
+        ]
+        questions.append(general_questions[idx % len(general_questions)])
+        
+    return questions[:3]
+
+
 def run(state: PipelineState) -> PipelineState:
     """
     Main simplification agent entry point.
@@ -323,6 +538,23 @@ def run(state: PipelineState) -> PipelineState:
     
     state.simplified_text = simplified_text
     state.transformed_chunks = simplified_blocks
+    
+    # Generate quiz questions if simplified_text exists
+    quiz_questions = []
+    if state.simplified_text.strip():
+        # Limit text size to ~4000 characters to keep it fast
+        sample_text = state.simplified_text[:4000]
+        if ollama_available:
+            quiz_questions = _generate_quiz_with_ollama(sample_text)
+        
+        if not quiz_questions:
+            quiz_questions = _generate_quiz_with_gemini(sample_text)
+            
+        if not quiz_questions:
+            logger.info("[AGENT:simplify] LLM quiz generation failed/offline. Generating local fallback quiz...")
+            quiz_questions = _generate_local_fallback_quiz(state)
+            
+    state.quiz_questions = quiz_questions
     
     # Update agent status
     if "fail" in methods_used and len(methods_used) == 1:

@@ -34,12 +34,12 @@ export function ReadingRuler({ enabled }: ReadingRulerProps) {
 
     return (
         <div
-            className="fixed left-0 right-0 pointer-events-none opacity-60 bg-yellow-200"
+            className="fixed left-0 right-0 pointer-events-none opacity-60 bg-yellow-200/50 z-[9999] top-0"
             style={{
                 height: '2.2em',
                 transform: `translateY(${position}px)`,
                 transition: 'transform 0.05s linear',
-                boxShadow: '0 0 20px rgba(251, 191, 36, 0.3)',
+                boxShadow: '0 0 20px rgba(251, 191, 36, 0.35)',
             }}
         />
     )
